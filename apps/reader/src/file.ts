@@ -11,7 +11,10 @@ export async function fileToEpub(file: File) {
   return ePub(data)
 }
 
-export async function handleFiles(files: Iterable<File>) {
+export async function handleFiles(
+  files: Iterable<File>,
+  folderId: string | null = null,
+) {
   const books = await db?.books.toArray()
   const newBooks = []
 
@@ -31,7 +34,7 @@ export async function handleFiles(files: Iterable<File>) {
     let book = books?.find((b) => b.name === file.name)
 
     if (!book) {
-      book = await addBook(file)
+      book = await addBook(file, folderId)
     }
 
     newBooks.push(book)
@@ -40,7 +43,12 @@ export async function handleFiles(files: Iterable<File>) {
   return newBooks
 }
 
-export async function addBook(file: File) {
+/**
+ * 新增一本书。
+ * `folderId` 决定它落在哪个文件夹（默认 null = 根目录）；
+ * 值由调用方传入：“导入到当前文件夹”就是靠这个参数实现的。
+ */
+export async function addBook(file: File, folderId: string | null = null) {
   const epub = await fileToEpub(file)
   const metadata = await epub.loaded.metadata
 
@@ -52,6 +60,8 @@ export async function addBook(file: File) {
     createdAt: Date.now(),
     definitions: [],
     annotations: [],
+    // 显式写 null（IndexedDB 里 undefined 不可索引，也不便于后续判定）
+    folderId,
   }
   db?.books.add(book)
   addFile(book.id, file, epub)
@@ -86,7 +96,7 @@ async function toDataUrl(url: string) {
   return readBlob((r) => r.readAsDataURL(buffer))
 }
 
-export async function fetchBook(url: string) {
+export async function fetchBook(url: string, folderId: string | null = null) {
   const filename = decodeURIComponent(/\/([^/]*\.epub)$/i.exec(url)?.[1] ?? '')
   const books = await db?.books.toArray()
   const book = books?.find((b) => b.name === filename)
@@ -95,6 +105,6 @@ export async function fetchBook(url: string) {
     book ??
     fetch(url)
       .then((res) => res.blob())
-      .then((blob) => addBook(new File([blob], filename)))
+      .then((blob) => addBook(new File([blob], filename), folderId))
   )
 }

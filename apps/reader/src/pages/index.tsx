@@ -167,7 +167,8 @@ const Library: React.FC = () => {
         const book = allBooks.find((b) => b.id === bookId)
         if (book) reader.addTab(book)
 
-        handleFiles(e.dataTransfer.files)
+        // 拖进来的 epub 落到当前文件夹
+        handleFiles(e.dataTransfer.files, folderId)
       }}
     >
       <div className="mb-4 space-y-2.5">
@@ -182,7 +183,7 @@ const Library: React.FC = () => {
                 title: t('download'),
                 Icon: MdOutlineFileDownload,
                 onClick(el) {
-                  if (el?.reportValidity()) fetchBook(el.value)
+                  if (el?.reportValidity()) fetchBook(el.value, folderId)
                 },
               },
             ]}
@@ -252,6 +253,7 @@ const Library: React.FC = () => {
                 onClick={() => {
                   fetchBook(
                     'https://epubtest.org/books/Fundamental-Accessibility-Tests-Basic-Functionality-v1.0.0.epub',
+                    folderId,
                   )
                 }}
               >
@@ -329,7 +331,7 @@ const Library: React.FC = () => {
                     className="absolute inset-0 cursor-pointer opacity-0"
                     onChange={(e) => {
                       const files = e.target.files
-                      if (files) handleFiles(files)
+                      if (files) handleFiles(files, folderId)
                     }}
                     multiple
                   />
