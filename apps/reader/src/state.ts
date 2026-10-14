@@ -57,3 +57,45 @@ const settingsState = atom<Settings>({
 export function useSettings() {
   return useRecoilState(settingsState)
 }
+
+/* ------------------------------------------------------------------ *
+ * FlowPlus 新增：图书馆视图 / 排序 / 搜索（Phase 8）
+ * ------------------------------------------------------------------ */
+
+/** 排序键（R5）：最近访问 / 按文件名 */
+export type SortKey = 'recent' | 'name'
+
+/** 当前图书馆视图：全部书籍，或某个文件夹 */
+export type LibraryView = { type: 'all' } | { type: 'folder'; id: string }
+
+export const defaultLibraryView: LibraryView = { type: 'all' }
+
+export const libraryViewState = atom<LibraryView>({
+  key: 'libraryView',
+  default: defaultLibraryView,
+  effects: [localStorageEffect<LibraryView>('libraryView', defaultLibraryView)],
+})
+
+export const sortState = atom<SortKey>({
+  key: 'sort',
+  default: 'recent',
+  effects: [localStorageEffect<SortKey>('sort', 'recent')],
+})
+
+/** 书名搜索关键词（跨文件夹）；空字符串 = 未搜索 */
+export const searchState = atom<string>({
+  key: 'search',
+  default: '',
+})
+
+export function useLibraryView() {
+  return useRecoilState(libraryViewState)
+}
+
+export function useSort() {
+  return useRecoilState(sortState)
+}
+
+export function useSearch() {
+  return useRecoilState(searchState)
+}

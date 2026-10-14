@@ -17,6 +17,8 @@ interface RowProps extends ComponentProps<'div'> {
   description?: string | number
   info?: string
   subitems?: Readonly<any[]>
+  /** 是否有子项 —— 用于只想知道“要不要显示折叠箭头”而不传 subitems 的场景 */
+  hasChildren?: boolean
   toggle?: () => void
   onActivate?: () => void
   onDelete?: () => void
@@ -31,6 +33,7 @@ export const Row: React.FC<RowProps> = ({
   active = false,
   depth = 0,
   subitems,
+  hasChildren = false,
   toggle,
   onActivate,
   className,
@@ -70,7 +73,7 @@ export const Row: React.FC<RowProps> = ({
       <StateLayer />
       <Twisty
         expanded={expanded}
-        className={clsx(!childCount && 'invisible')}
+        className={clsx(!(childCount || hasChildren) && 'invisible')}
         onClick={(e) => {
           e.stopPropagation()
           toggle?.()

@@ -17,6 +17,20 @@ export interface CoverRecord {
   cover: string | null
 }
 
+/**
+ * 图书馆文件夹（FlowPlus 新增）
+ *
+ * 邻接表结构：`parentId` 指向上级文件夹；`null` 表示顶级。
+ * 注意：`book.folderId` 必须要么是 `null`、要么指向**存在**的文件夹
+ * （删除非空文件夹被禁止，所以不会出现悬空引用）。
+ */
+export interface FolderRecord {
+  id: string
+  name: string
+  parentId: string | null
+  createdAt: number
+}
+
 export interface BookRecord {
   // TODO: use file hash as id
   id: string
@@ -32,6 +46,12 @@ export interface BookRecord {
   configuration?: {
     typography?: TypographyConfiguration
   }
+  /**
+   * 所属文件夹（FlowPlus 新增）。`null` = 根目录。
+   * 迁移会把所有老书显式写成 `null`——因为 IndexedDB 里 `undefined` 不可索引，
+   * 否则 `where('folderId').equals(null)` 这类查询会静默漏掉老书。
+   */
+  folderId?: string | null
 }
 
 export class DB extends Dexie {
@@ -40,9 +60,28 @@ export class DB extends Dexie {
   files!: Table<FileRecord>
   covers!: Table<CoverRecord>
   books!: Table<BookRecord>
+  folders!: Table<FolderRecord>
 
   constructor(name: string) {
     super(name)
+
+    // v6（FlowPlus）：新增 folders 表，并给 books 加 folderId 索引
+    this.version(6)
+      .stores({
+        books:
+          'id, name, size, metadata, createdAt, updatedAt, cfi, percentage, definitions, annotations, configuration, folderId',
+        folders: 'id, parentId, name, createdAt',
+      })
+      .upgrade(async (t) => {
+        // ⚠️ 关键：IndexedDB 里 `undefined` 不可被索引，
+        // 不写成 null 的话 “根目录” 查询会漏掉所有老书（症状是静默丢书）。
+        await t
+          .table('books')
+          .toCollection()
+          .modify((book) => {
+            if (book.folderId === undefined) book.folderId = null
+          })
+      })
 
     this.version(5).stores({
       books:
