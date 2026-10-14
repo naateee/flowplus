@@ -1,0 +1,20 @@
+FlowPlus — NOTICE
+=================
+
+本作品是 Pacexy 的 Flow 项目的修改版（fork）：
+
+    上游项目：https://github.com/pacexy/flow
+    上游许可：AGPL-3.0（见本仓库根目录 LICENSE）
+
+依据 AGPL-3.0，本修改版同样以 AGPL-3.0 发布。修改内容（截至 2026-10）：
+
+1. 移除云同步与账号功能：Dropbox 授权、文件上传/下载、分享链接，以及相关
+   服务端 API 路由（`src/pages/api/*`）。
+2. 移除遥测与统计：Sentry（上游在 `sentry.client.config.js` 中硬编码了作者
+   自己的 DSN）与 Google Tag Manager。
+3. 改为单语言（简体中文）：移除 Next.js 的 i18n 路由配置与界面语言选择器。
+4. 改为静态导出：使用 `next build && next export` 产出纯静态站点，由本机
+   静态服务器按需投递；不再使用 SSR / Docker 形态。
+5. 品牌化：应用名称改为 FlowPlus，替换应用图标，更新说明文档。
+
+本仓库与上游作者没有任何官方关系，也未获得上游的认可或背书。

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/web-manifest-combined.json",
-  "name": "Flow",
-  "short_name": "Flow",
-  "description": "Redefine EPUB reader",
+  "name": "FlowPlus",
+  "short_name": "FlowPlus",
+  "description": "本地优先的 EPUB 阅读器（基于 Flow 修改）",
   "icons": [
     {
       "src": "/icons/192.png",
@@ -27,11 +27,11 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#fff",
-  "background_color": "#fff",
+  "theme_color": "#006591",
+  "background_color": "#ffffff",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "file_handlers": [
     {
       "action": "/",
