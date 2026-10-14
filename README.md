@@ -38,13 +38,30 @@ pnpm -F @flow/reader export
 
 ## 本地运行
 
-`out/` 是一个纯静态站点，用任意静态服务器在 **4300 端口** 起一次即可：
+`out/` 是纯静态站点。**静态服务器只在两种时刻需要**：首次安装 PWA，以及每次更新/恢复；
+之后可以完全关掉 —— Service Worker 会从缓存直接提供页面。
 
 ```bash
 python -m http.server 4300 --bind 127.0.0.1 --directory apps/reader/out
 ```
 
 然后在 Edge 中打开 `http://localhost:4300` 并「安装为应用」。
+
+> ⚠️ 静态服务器必须把 `/_` 映射到 `out/_.html`（`next export` 的产物形态），否则该路由会 404。
+> `python -m http.server` 不支持这种映射，用 Caddy 更省事：
+>
+> ```
+> http://localhost:4300 {
+> 	bind 127.0.0.1
+> 	root * /path/to/apps/reader/out
+> 	try_files {path} {path}.html {path}/index.html /index.html
+> 	file_server
+> 	header /sw.js Cache-Control "no-cache"
+> }
+> ```
+
+> ⚠️ 端口与主机名都是 **origin 的一部分**：请固定使用 `http://localhost:4300`。
+> 改成 `127.0.0.1`、或改用 `https://`，都会变成另一个 origin —— 你看到的将是**另一个空书库**。
 
 ## 数据与备份
 
