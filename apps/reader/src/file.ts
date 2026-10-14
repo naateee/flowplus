@@ -2,9 +2,9 @@ import { v4 as uuidv4 } from 'uuid'
 
 import ePub, { Book } from '@flow/epubjs'
 
+import { unpack } from './backup'
 import { BookRecord, db } from './db'
 import { mapExtToMimes } from './mime'
-import { unpack } from './sync'
 
 export async function fileToEpub(file: File) {
   const data = await file.arrayBuffer()

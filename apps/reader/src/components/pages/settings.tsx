@@ -1,17 +1,7 @@
-import { useEventListener } from '@literal-ui/hooks'
 import Dexie from 'dexie'
-import { useRouter } from 'next/router'
-import { parseCookies, destroyCookie } from 'nookies'
 
-import {
-  ColorScheme,
-  useColorScheme,
-  useForceRender,
-  useTranslation,
-} from '@flow/reader/hooks'
-import { localeNames } from '@flow/reader/locales'
+import { ColorScheme, useColorScheme, useTranslation } from '@flow/reader/hooks'
 import { useSettings } from '@flow/reader/state'
-import { dbx, mapToToken, OAUTH_SUCCESS_MESSAGE } from '@flow/reader/sync'
 
 import { Button } from '../Button'
 import { Checkbox, Select } from '../Form'
@@ -19,27 +9,12 @@ import { Page } from '../Page'
 
 export const Settings: React.FC = () => {
   const { scheme, setScheme } = useColorScheme()
-  const { asPath, push, locale, locales } = useRouter()
   const [settings, setSettings] = useSettings()
   const t = useTranslation('settings')
 
   return (
     <Page headline={t('title')}>
       <div className="space-y-6">
-        <Item title={t('language')}>
-          <Select
-            value={locale}
-            onChange={(e) => {
-              push(asPath, undefined, { locale: e.target.value })
-            }}
-          >
-            {locales?.map((loc) => (
-              <option key={loc} value={loc}>
-                {localeNames[loc] || loc}
-              </option>
-            ))}
-          </Select>
-        </Item>
         <Item title={t('color_scheme')}>
           <Select
             value={scheme}
@@ -64,11 +39,16 @@ export const Settings: React.FC = () => {
             }}
           />
         </Item>
-        <Synchronization />
         <Item title={t('cache')}>
           <Button
             variant="secondary"
             onClick={() => {
+              // FlowPlus：这个按钮会删掉本机全部书籍、进度与标注，加一道确认
+              const ok = window.confirm(
+                '确定要清除本机数据吗？\n\n这会删除全部书籍、封面、阅读进度与标注。\n此操作不可撤销，请先确认已经导出过备份。',
+              )
+              if (!ok) return
+
               window.localStorage.clear()
               Dexie.getDatabaseNames().then((names) => {
                 names.forEach((n) => Dexie.delete(n))
@@ -80,61 +60,6 @@ export const Settings: React.FC = () => {
         </Item>
       </div>
     </Page>
-  )
-}
-
-const Synchronization: React.FC = () => {
-  const cookies = parseCookies()
-  const refreshToken = cookies[mapToToken['dropbox']]
-  const render = useForceRender()
-  const t = useTranslation('settings.synchronization')
-
-  useEventListener('message', (e) => {
-    if (e.data === OAUTH_SUCCESS_MESSAGE) {
-      // init app (generate access token, fetch remote data, etc.)
-      window.location.reload()
-    }
-  })
-
-  return (
-    <Item title={t('title')}>
-      <Select>
-        <option value="dropbox">Dropbox</option>
-      </Select>
-      <div className="mt-2">
-        {refreshToken ? (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              destroyCookie(null, mapToToken['dropbox'])
-              render()
-            }}
-          >
-            {t('unauthorize')}
-          </Button>
-        ) : (
-          <Button
-            onClick={() => {
-              const redirectUri =
-                window.location.origin + '/api/callback/dropbox'
-
-              dbx.auth
-                .getAuthenticationUrl(
-                  redirectUri,
-                  JSON.stringify({ redirectUri }),
-                  'code',
-                  'offline',
-                )
-                .then((url) => {
-                  window.open(url as string, '_blank')
-                })
-            }}
-          >
-            {t('authorize')}
-          </Button>
-        )}
-      </div>
-    </Item>
   )
 }
 

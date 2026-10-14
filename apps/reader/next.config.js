@@ -1,9 +1,6 @@
-const path = require('path')
-
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 })
-const { withSentryConfig } = require('@sentry/nextjs')
 const withPWA = require('next-pwa')({
   dest: 'public',
 })
@@ -13,25 +10,17 @@ const withTM = require('next-transpile-modules')([
   '@material/material-color-utilities',
 ])
 
-const IS_DEV = process.env.NODE_ENV === 'development'
-const IS_DOCKER = process.env.DOCKER
-
 /**
- * @type {import('@sentry/nextjs').SentryWebpackPluginOptions}
- **/
-const sentryWebpackPluginOptions = {
-  // Additional config options for the Sentry Webpack plugin. Keep in mind that
-  // the following options are set automatically, and overriding them is not
-  // recommended:
-  //   release, url, org, project, authToken, configFile, stripPrefix,
-  //   urlPrefix, include, ignore
-
-  silent: true, // Suppresses all logs
-  // For all available options, see:
-  // https://github.com/getsentry/sentry-webpack-plugin#options.
-}
-
-/**
+ * FlowPlus 相对上游的改动：
+ *
+ * 1. 移除 `i18n`：Next 的 i18n 路由与静态导出（`next export`）互斥；
+ *    FlowPlus 改为单语言简体中文（见 src/hooks/useTranslation.ts）。
+ * 2. 移除 `withSentryConfig`：上游把作者自己的 Sentry DSN 硬编码在
+ *    `sentry.client.config.js` 里（空环境变量也无法覆盖），会把错误上报到
+ *    上游的项目；FlowPlus 不做任何遥测。
+ * 3. 移除 `output: 'standalone'`：FlowPlus 走「静态导出 + 按需本地投递」，
+ *    不使用 Docker，不需要 standalone 产物。
+ *
  * @type {import('next').NextConfig}
  **/
 const config = {
@@ -39,27 +28,6 @@ const config = {
   webpack(config) {
     return config
   },
-  i18n: {
-    locales: ['en-US', 'zh-CN', 'ja-JP', 'de-DE'],
-    defaultLocale: 'en-US',
-  },
-  ...(IS_DOCKER && {
-    output: 'standalone',
-    experimental: {
-      outputFileTracingRoot: path.join(__dirname, '../../'),
-    },
-  }),
 }
 
-const base = withPWA(withTM(withBundleAnalyzer(config)))
-
-const dev = base
-const docker = base
-const prod = withSentryConfig(
-  base,
-  // Make sure adding Sentry options is the last code to run before exporting, to
-  // ensure that your source maps include changes from all other Webpack plugins
-  sentryWebpackPluginOptions,
-)
-
-module.exports = IS_DEV ? dev : IS_DOCKER ? docker : prod
+module.exports = withPWA(withTM(withBundleAnalyzer(config)))

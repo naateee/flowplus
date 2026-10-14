@@ -1,41 +1,14 @@
-import { Dropbox } from 'dropbox'
+// FlowPlus：本地备份导出/导入
+//
+// 本文件从上游的 `src/sync.ts` 拆出。
+// 上游把「本地 zip 备份」与「Dropbox 云同步」混在同一个文件里，
+// 这里只保留与云无关的部分：pack()（导出）/ unpack()（导入恢复）。
+// 云同步、Dropbox OAuth、远程上传/下载均已在 FlowPlus 中移除。
+
 import { saveAs } from 'file-saver'
 import JSZip from 'jszip'
-import { parseCookies } from 'nookies'
 
 import { BookRecord, db } from './db'
-import { readBlob } from './file'
-
-export const mapToToken = {
-  dropbox: 'dropbox-refresh-token',
-}
-
-export const OAUTH_SUCCESS_MESSAGE = 'oauth_success'
-
-export const dbx = new Dropbox({
-  clientId: process.env.NEXT_PUBLIC_DROPBOX_CLIENT_ID,
-  refreshToken: '__fake_token__',
-})
-let _req: Promise<void> | undefined
-dbx.auth.refreshAccessToken = () => {
-  const cookies = parseCookies()
-  const refreshToken = cookies[mapToToken['dropbox']]
-  if (!refreshToken) {
-    // `reject` to skip subsequent api requests
-    return Promise.reject()
-  }
-  _req ??= fetch(`/api/refresh`)
-    .then((res) => res.json())
-    .then((data) => {
-      dbx.auth.setAccessToken(data.accessToken)
-      dbx.auth.setAccessTokenExpiresAt(data.accessTokenExpiresAt)
-    })
-    .finally(() => {
-      // will fail if no refresh token
-      _req = undefined
-    })
-  return _req
-}
 
 interface SerializedBooks {
   version: number
@@ -67,28 +40,10 @@ function deserializeData(text: string) {
   return books
 }
 
-export async function uploadData(books: BookRecord[]) {
-  return dbx.filesUpload({
-    path: `/${DATA_FILENAME}`,
-    mode: { '.tag': 'overwrite' },
-    contents: serializeData(books),
-  })
-}
-
-export const dropboxFilesFetcher = (path: string) => {
-  return dbx.filesListFolder({ path }).then((d) => d.result.entries)
-}
-
-export const dropboxBooksFetcher = (path: string) => {
-  return dbx
-    .filesDownload({ path })
-    .then((d) => {
-      const blob: Blob = (d.result as any).fileBlob
-      return readBlob((r) => r.readAsText(blob))
-    })
-    .then((d) => deserializeData(d))
-}
-
+/**
+ * 导出完整备份：data.json（元数据/进度/标注）+ covers.json + files/<每本 epub>
+ * 文件名形如 `flow_backup_YYYYMMDD.zip`
+ */
 export async function pack() {
   const books = await db?.books.toArray()
   const covers = await db?.covers.toArray()
@@ -108,6 +63,7 @@ export async function pack() {
   })
 }
 
+/** 从 pack() 产出的 zip 恢复书库 */
 export async function unpack(file: File) {
   const zip = new JSZip()
   await zip.loadAsync(file)
